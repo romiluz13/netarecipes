@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /recipes/{userId}/{allPaths=**} {
+      allow read: if 
+        // מאפשר קריאה לכולם כי התמונות הן ציבוריות
+        true;
+      
+      allow write: if
+        // מאפשר העלאה רק למשתמש המחובר בתיקייה שלו
+        request.auth != null &&
+        request.auth.uid == userId &&
+        // מגביל את גודל הקובץ ל-5MB
+        request.resource.size < 5 * 1024 * 1024 &&
+        // מאפשר רק תמונות
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+} 
