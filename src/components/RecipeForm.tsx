@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc, setDoc, updateDoc, collection } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { Recipe } from '../types/recipe';
-import { Plus, Minus, Upload, Loader2 } from 'lucide-react';
+import { Plus, Minus, Upload, Loader2, Camera, Image } from 'lucide-react';
 
 function RecipeForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth0();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<Partial<Recipe>>({
     title: '',
@@ -26,38 +28,69 @@ function RecipeForm() {
     ingredients: [{ item: '', amount: 1, unit: 'כוס' }],
     instructions: [''],
     notes: '',
-    isPublic: false
+    isPublic: true
   });
 
   useEffect(() => {
-    if (id) {
-      const fetchRecipe = async () => {
-        const docRef = doc(db, 'recipes', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setFormData(docSnap.data() as Recipe);
-          setImagePreview(docSnap.data().imageUrl);
+    const fetchRecipe = async () => {
+      if (id) {
+        try {
+          const docRef = doc(db, 'recipes', id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const recipeData = docSnap.data() as Recipe;
+            setFormData({
+              ...recipeData,
+              categories: recipeData.categories || [],
+              ingredients: recipeData.ingredients || [{ item: '', amount: 1, unit: 'כוס' }],
+              instructions: recipeData.instructions || ['']
+            });
+            setImagePreview(recipeData.imageUrl || '');
+          } else {
+            navigate('/recipes');
+          }
+        } catch (error) {
+          console.error('Error fetching recipe:', error);
+          alert('אירעה שגיאה בטעינת המתכון');
         }
-      };
-      fetchRecipe();
-    }
-  }, [id]);
+      }
+    };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    fetchRecipe();
+  }, [id, navigate]);
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const storageRef = ref(storage, `recipes/${user?.uid}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setFormData(prev => ({ ...prev, imageUrl: url }));
+      setImagePreview(url);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('אירעה שגיאה בהעלאת התמונה. אנא נסה שוב.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLoading(true);
-      try {
-        const storageRef = ref(storage, `recipes/${user?.sub}/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        setFormData(prev => ({ ...prev, imageUrl: url }));
-        setImagePreview(url);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-      } finally {
-        setLoading(false);
-      }
+      await handleImageUpload(file);
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Implementation for camera capture UI
+      // You might want to create a modal/overlay for this
+      stream.getTracks().forEach(track => track.stop());
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('לא ניתן לגשת למצלמה. אנא נסה דרך הגלריה.');
     }
   };
 
@@ -87,22 +120,27 @@ function RecipeForm() {
     setLoading(true);
 
     try {
+      if (!user?.uid) {
+        throw new Error('User not authenticated');
+      }
+
       const recipeData = {
         ...formData,
         prepTime: Math.max(0, formData.prepTime || 0),
         cookTime: Math.max(0, formData.cookTime || 0),
         servings: Math.max(1, formData.servings || 1),
-        userId: user?.sub,
-        updatedAt: new Date(),
-        createdAt: id ? formData.createdAt : new Date(),
-        likes: id ? formData.likes : 0,
+        userId: user.uid,
+        updatedAt: new Date().toISOString(),
+        createdAt: id ? formData.createdAt : new Date().toISOString(),
+        likes: id ? (formData.likes || 0) : 0,
         categories: formData.categories?.map(cat => cat.trim()).filter(Boolean) || [],
         ingredients: formData.ingredients?.map(ing => ({
           ...ing,
           item: ing.item.trim(),
           unit: ing.unit.trim()
         })) || [],
-        instructions: formData.instructions?.map(inst => inst.trim()).filter(Boolean) || []
+        instructions: formData.instructions?.map(inst => inst.trim()).filter(Boolean) || [],
+        isPublic: formData.isPublic ?? true
       };
 
       if (id) {
@@ -189,27 +227,63 @@ function RecipeForm() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              תמונה
-            </label>
-            <div className="flex items-center gap-4">
-              <label className="btn btn-secondary cursor-pointer">
-                <Upload className="w-5 h-5 mr-2" />
-                העלאת תמונה
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
-              {imagePreview && (
-                <img
-                  src={imagePreview}
-                  alt="תצוגה מקדימה"
-                  className="w-20 h-20 object-cover rounded-lg"
-                />
+          <div className="card p-6">
+            <h2 className="text-xl font-semibold mb-4">תמונת המתכון</h2>
+            <div className="flex flex-col items-center gap-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="תצוגה מקדימה"
+                    className="w-full max-w-md h-64 object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImagePreview('');
+                      setFormData(prev => ({ ...prev, imageUrl: '' }));
+                    }}
+                    className="absolute top-2 right-2 btn btn-error btn-sm"
+                  >
+                    הסר
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    ref={fileInputRef}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="btn btn-secondary"
+                    disabled={uploadingImage}
+                  >
+                    <Image className="w-5 h-5 ml-2" />
+                    בחר מהגלריה
+                  </button>
+                  {/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
+                    <button
+                      type="button"
+                      onClick={handleCameraCapture}
+                      className="btn btn-secondary"
+                      disabled={uploadingImage}
+                    >
+                      <Camera className="w-5 h-5 ml-2" />
+                      צלם תמונה
+                    </button>
+                  )}
+                </div>
+              )}
+              {uploadingImage && (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>מעלה תמונה...</span>
+                </div>
               )}
             </div>
           </div>

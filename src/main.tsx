@@ -10,8 +10,11 @@ createRoot(document.getElementById('root')!).render(
       domain="dev-lovfh35mihqwacds.us.auth0.com"
       clientId="e8GfuYrIKj6ygWOxI9EkzzaehBHgkFUR"
       authorizationParams={{
-        redirect_uri: window.location.origin
+        redirect_uri: window.location.origin,
+        scope: 'openid profile email'
       }}
+      useRefreshTokens={true}
+      cacheLocation="localstorage"
     >
       <App />
     </Auth0Provider>

@@ -56,3 +56,74 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
   }
 }
+
+@media print {
+  @page {
+    margin: 2cm;
+  }
+
+  body {
+    background: white;
+  }
+
+  .btn,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+  }
+
+  .page-container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  h1 {
+    font-size: 24pt !important;
+    margin-bottom: 1cm !important;
+  }
+
+  h2 {
+    font-size: 18pt !important;
+    margin-bottom: 0.5cm !important;
+    break-after: avoid !important;
+  }
+
+  p, li {
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    max-height: 10cm !important;
+    object-fit: cover !important;
+    break-inside: avoid !important;
+    margin-bottom: 1cm !important;
+  }
+
+  .grid {
+    display: block !important;
+  }
+
+  .space-y-8 > * + * {
+    margin-top: 1cm !important;
+  }
+
+  .ingredients-list {
+    break-inside: avoid !important;
+  }
+
+  .instruction-step {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

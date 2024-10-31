@@ -6,7 +6,7 @@ export interface Recipe {
   prepTime: number;
   cookTime: number;
   servings: number;
-  difficulty: 'קל' | 'בינוני' | 'מאתגר';
+  difficulty: string;
   categories: string[];
   ingredients: {
     item: string;
@@ -16,8 +16,9 @@ export interface Recipe {
   instructions: string[];
   notes: string;
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  likes: number;
+  createdAt: string;
+  updatedAt: string;
   isPublic: boolean;
+  likes: number;
+  likedBy?: string[];
 }

@@ -1,35 +1,28 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
-// יש להעביר את המפתחות הללו ל-.env
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyCE_P_ry3W9V2aHAFVWo3iK0Np8yEtFdZg",
+  authDomain: "neta-recipes.firebaseapp.com",
+  projectId: "neta-recipes",
+  storageBucket: "neta-recipes.appspot.com",
+  messagingSenderId: "802923641287",
+  appId: "1:802923641287:web:2cbc4d3211eca8188301e2"
 };
 
-// אתחול Firebase
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// אתחול Firestore עם תמיכה במצב לא מקוון
+// Initialize Firestore
 const db = getFirestore(app);
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code == 'failed-precondition') {
-    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
-  } else if (err.code == 'unimplemented') {
-    console.warn('The current browser does not support persistence.');
-  }
-});
 
-// אתחול Storage
+// Initialize Storage
 const storage = getStorage(app);
 
-// אתחול Authentication
+// Initialize Authentication
 const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
-export { db, storage, auth };
+export { db, storage, auth, googleProvider };
