@@ -42,7 +42,6 @@ function RecipeList() {
     const fetchRecipes = async () => {
       setLoading(true);
       try {
-        // Get all recipes - we'll filter them client-side since it's a family app
         const q = query(
           collection(db, 'recipes'),
           orderBy('createdAt', 'desc')
@@ -78,8 +77,9 @@ function RecipeList() {
       recipe.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       recipe.categories.some(cat => cat.toLowerCase().includes(searchQuery.toLowerCase())) ||
       recipe.ingredients.some(ing => ing.item.toLowerCase().includes(searchQuery.toLowerCase()));
+    const publicOrOwned = recipe.isPublic || (user && recipe.userId === user.uid);
     
-    return categoryMatch && difficultyMatch && searchMatch;
+    return categoryMatch && difficultyMatch && searchMatch && publicOrOwned;
   });
 
   if (loading) {
@@ -99,7 +99,7 @@ function RecipeList() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl md:text-3xl font-bold">מתכוני המשפחה</h1>
         {user && (
-          <Link to="/recipes/new" className="btn btn-primary w-full md:w-auto">
+          <Link to="/recipe/new" className="btn btn-primary w-full md:w-auto">
             מתכון חדש
           </Link>
         )}

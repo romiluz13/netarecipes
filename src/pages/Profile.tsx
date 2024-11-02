@@ -110,100 +110,98 @@ function Profile() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex flex-col md:flex-row items-center gap-6">
+    <div className="space-y-6 p-4 md:p-6">
+      {/* Profile Header Section */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          {/* Profile Photo */}
           <div className="relative">
-            <img
-              src={user?.photoURL || '/placeholder-avatar.jpg'}
-              alt={user?.displayName || 'תמונת פרופיל'}
-              className="w-32 h-32 rounded-full object-cover"
-            />
-            <label className="absolute bottom-0 right-0 bg-primary-500 text-white p-2 rounded-full cursor-pointer">
+            <div className="w-32 h-32 rounded-full overflow-hidden">
+              <img
+                src={user?.photoURL || '/placeholder-avatar.jpg'}
+                alt="תמונת פרופיל"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <label className="absolute bottom-0 right-0 bg-primary-500 text-white p-2 rounded-full cursor-pointer hover:bg-primary-600 transition-colors">
               <input
                 type="file"
                 accept="image/*"
-                className="hidden"
                 onChange={handlePhotoUpload}
-                disabled={uploadingPhoto}
+                className="hidden"
               />
-              {uploadingPhoto ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Camera className="w-5 h-5" />
-              )}
+              <Camera className="w-4 h-4" />
             </label>
           </div>
 
-          <div className="flex-1 text-center md:text-right">
-            {isEditingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="input"
-                  placeholder="השם שלך"
-                />
-                <button
-                  onClick={handleNameUpdate}
-                  className="btn btn-primary"
-                >
-                  שמור
-                </button>
-                <button
-                  onClick={() => setIsEditingName(false)}
-                  className="btn btn-ghost"
-                >
-                  ביטול
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 justify-center md:justify-start">
-                <h1 className="text-2xl font-bold">{user?.displayName}</h1>
-                <button
-                  onClick={() => setIsEditingName(true)}
-                  className="btn btn-ghost btn-sm"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            <p className="text-gray-600">{user?.email}</p>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary-500">{stats.totalRecipes}</div>
-              <div className="text-sm text-gray-600">מתכונים</div>
+          {/* Profile Info */}
+          <div className="flex-1 text-center sm:text-right">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+              {isEditingName ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="rounded-md border-gray-300"
+                  />
+                  <button
+                    onClick={handleNameUpdate}
+                    className="btn btn-primary btn-sm"
+                  >
+                    שמור
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold">{user?.displayName}</h2>
+                  <button
+                    onClick={() => setIsEditingName(true)}
+                    className="text-gray-500 hover:text-primary-500"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary-500">{stats.totalLikes}</div>
-              <div className="text-sm text-gray-600">לייקים</div>
+            <p className="text-gray-600 mb-4">{user?.email}</p>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-primary-500">
+                  {stats.totalRecipes}
+                </div>
+                <div className="text-sm text-gray-600">מתכונים</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-primary-500">
+                  {stats.totalLikes}
+                </div>
+                <div className="text-sm text-gray-600">לייקים</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">המתכונים שלי</h2>
-        <Link to="/recipes/new" className="btn btn-primary">
+      {/* Existing Recipes Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">המתכונים שלי</h1>
+        <Link to="/recipes/new" className="btn btn-primary w-full sm:w-auto">
           מתכון חדש
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Rest of the component stays the same */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {recipes.map(recipe => (
-          <div
-            key={recipe.id}
-            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
-          >
+          <div key={recipe.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="relative h-48">
               <img
                 src={recipe.imageUrl || '/placeholder-recipe.jpg'}
                 alt={recipe.title}
                 className="w-full h-full object-cover rounded-t-xl"
-                loading="lazy"
               />
               {recipe.isPublic && (
                 <div className="absolute top-2 right-2 bg-primary-500 text-white px-2 py-1 rounded-full text-xs">
@@ -217,54 +215,26 @@ function Profile() {
               <div className="flex items-center gap-4 text-gray-600 text-sm mb-4">
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  <span>{recipe.prepTime + recipe.cookTime} דקות</span>
+                  <span>{recipe.prepTime} דקות</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
                   <span>{recipe.servings} מנות</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <ChefHat className="w-4 h-4" />
-                  <span>{recipe.difficulty}</span>
-                </div>
               </div>
               
               <div className="flex justify-between items-center">
                 <Link
-                  to={`/recipes/${recipe.id}`}
+                  to={`/recipe/${recipe.id}`}
                   className="btn btn-secondary btn-sm"
                 >
                   צפה במתכון
                 </Link>
-                <div className="flex gap-2">
-                  <Link
-                    to={`/recipes/edit/${recipe.id}`}
-                    className="btn btn-ghost btn-sm"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button className="btn btn-ghost btn-sm text-error">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
-
-      {recipes.length === 0 && (
-        <div className="text-center py-12">
-          <ChefHat className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">אין לך עדיין מתכונים</h3>
-          <p className="text-gray-500 mb-4">
-            התחל ליצור ולשתף את המתכונים האהובים עליך
-          </p>
-          <Link to="/recipes/new" className="btn btn-primary">
-            צור מתכון חדש
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

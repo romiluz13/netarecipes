@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, deleteDoc, updateDoc, increment, setDoc, deleteField, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, updateDoc, increment, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Recipe } from '../types/recipe';
+import { Recipe } from '../types/Recipe';
 import { Clock, Users, ChefHat, Edit, Trash2, Heart, Share2, Loader2, Printer } from 'lucide-react';
 import { RecipeDetailSkeleton } from './Skeleton';
 import Comments from './Comments';
 
 function RecipeDetail() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -18,10 +18,14 @@ function RecipeDetail() {
   const [deleting, setDeleting] = useState(false);
   const [liking, setLiking] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     const fetchRecipeAndAuthor = async () => {
-      if (!id) return;
+      if (!id) {
+        navigate('/');
+        return;
+      }
       
       setLoading(true);
       try {
@@ -29,15 +33,13 @@ function RecipeDetail() {
         const recipeSnap = await getDoc(recipeRef);
         
         if (!recipeSnap.exists()) {
-          navigate('/recipes');
+          navigate('/');
           return;
         }
 
         const recipeData = {
           id: recipeSnap.id,
-          ...recipeSnap.data(),
-          createdAt: recipeSnap.data().createdAt?.toDate(),
-          updatedAt: recipeSnap.data().updatedAt?.toDate()
+          ...recipeSnap.data()
         } as Recipe;
         
         setRecipe(recipeData);
@@ -57,7 +59,7 @@ function RecipeDetail() {
         }
       } catch (error) {
         console.error('Error fetching recipe:', error);
-        setError('אירעה שגיאה בטעינת המתכון');
+        // Handle error (e.g., show error message)
       } finally {
         setLoading(false);
       }
@@ -67,28 +69,28 @@ function RecipeDetail() {
   }, [id, navigate, user?.uid]);
 
   const handleDelete = async () => {
-    if (!window.confirm('האם אתה בטוח שברצונך למחוק מתכון זה?')) return;
+    if (!id || !window.confirm('האם אתה בטוח שברצונך למחוק מתכון זה?')) return;
     
     setDeleting(true);
     try {
-      // מחיקת לייקים
-      const likesRef = collection(db, 'recipes', id!, 'likes');
+      // Delete likes
+      const likesRef = collection(db, 'recipes', id, 'likes');
       const likesSnapshot = await getDocs(likesRef);
       const likesPromises = likesSnapshot.docs.map(doc => 
         deleteDoc(doc.ref)
       );
       await Promise.all(likesPromises);
 
-      // מחיקת תגובות
-      const commentsRef = collection(db, 'recipes', id!, 'comments');
+      // Delete comments
+      const commentsRef = collection(db, 'recipes', id, 'comments');
       const commentsSnapshot = await getDocs(commentsRef);
       const commentsPromises = commentsSnapshot.docs.map(doc => 
         deleteDoc(doc.ref)
       );
       await Promise.all(commentsPromises);
 
-      // מחיקת המתכון עצמו
-      await deleteDoc(doc(db, 'recipes', id!));
+      // Delete the recipe itself
+      await deleteDoc(doc(db, 'recipes', id));
       
       navigate('/');
     } catch (error) {
@@ -100,7 +102,9 @@ function RecipeDetail() {
   };
 
   const handleEdit = () => {
-    navigate(`/recipes/edit/${id}`);
+    if (id) {
+      navigate(`/recipe/edit/${id}`);
+    }
   };
 
   const handleLike = async () => {
@@ -137,8 +141,9 @@ function RecipeDetail() {
   };
 
   const handleShare = async () => {
-    if (!recipe) return;
+    if (!recipe || sharing) return;
     
+    setSharing(true);
     try {
       if (navigator.share) {
         await navigator.share({
@@ -151,22 +156,32 @@ function RecipeDetail() {
         alert('הקישור הועתק ללוח');
       }
     } catch (error) {
-      if (error instanceof Error && error.name !== 'AbortError') {
-        console.error('Error sharing recipe:', error);
-        // Fallback to copying link
-        try {
-          await navigator.clipboard.writeText(window.location.href);
-          alert('הקישור הועתק ללוח');
-        } catch (clipboardError) {
-          console.error('Error copying to clipboard:', clipboardError);
-        }
+      console.error('Error sharing recipe:', error);
+      // Fallback to copying link
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('הקישור הועתק ללוח');
+      } catch (clipboardError) {
+        console.error('Error copying to clipboard:', clipboardError);
+        alert('לא ניתן לשתף את המתכון כרגע. נסה שוב מאוחר יותר.');
       }
+    } finally {
+      setSharing(false);
     }
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  const RecipePlaceholder = () => (
+    <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+      <div className="text-center">
+        <ChefHat className="w-16 h-16 text-primary-500 mx-auto mb-4" />
+        <p className="text-primary-700 font-semibold">תמונת מתכון לא זמינה</p>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return <RecipeDetailSkeleton />;
@@ -177,19 +192,23 @@ function RecipeDetail() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
       <div className="relative h-[300px] md:h-[400px] rounded-xl overflow-hidden">
-        <img
-          src={recipe.imageUrl}
-          alt={recipe.title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
+        {recipe.imageUrl ? (
+          <img
+            src={recipe.imageUrl}
+            alt={recipe.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <RecipePlaceholder />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
         <div className="absolute bottom-0 right-0 left-0 p-4 md:p-8">
           <div className="flex items-center gap-4 text-white">
             {authorData?.photoURL && (
               <img
                 src={authorData.photoURL}
-                alt={authorData.displayName}
+                alt={authorData.displayName || ''}
                 className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white"
                 loading="lazy"
               />
@@ -245,8 +264,13 @@ function RecipeDetail() {
           <button 
             onClick={handleShare} 
             className="btn btn-secondary flex-1 sm:flex-none"
+            disabled={sharing}
           >
-            <Share2 className="w-4 h-4 ml-2" />
+            {sharing ? (
+              <Loader2 className="w-4 h-4 animate-spin ml-2" />
+            ) : (
+              <Share2 className="w-4 h-4 ml-2" />
+            )}
             שתף
           </button>
           <button 
@@ -288,7 +312,7 @@ function RecipeDetail() {
           )}
 
           <div className="card p-4 md:p-6 print:hidden">
-            <Comments recipeId={recipe.id} />
+            <Comments recipeId={recipe.id} recipeOwnerId={recipe.userId} />
           </div>
         </div>
 

@@ -2,12 +2,13 @@ import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ChefHat } from 'lucide-react';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
-import NewRecipeForm from './components/NewRecipeForm';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { HelmetProvider } from 'react-helmet-async';
 
 const RecipeList = lazy(() => import('./components/RecipeList'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -96,47 +97,49 @@ function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
-            <Navbar />
-            <main className="flex-1 pt-16">
-              <Suspense fallback={<div className="text-center py-8">טוען...</div>}>
-                <Routes>
-                  <Route path="/" element={<RecipeList />} />
-                  <Route path="/recipe/:id" element={<RecipeDetail />} />
-                  <Route path="/recipe/new" element={
-                    <ProtectedRoute>
-                      <NewRecipeForm />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/recipe/edit/:id" element={
-                    <ProtectedRoute>
-                      <RecipeForm />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/profile" element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/new-recipe" element={<NewRecipeForm />} />
-                  {/* Redirects for old routes */}
-                  <Route path="/recipes" element={<Navigate to="/" replace />} />
-                  <Route path="/recipes/:id" element={<Navigate to="/recipe/:id" replace />} />
-                  <Route path="/recipes/new" element={<Navigate to="/recipe/new" replace />} />
-                  <Route path="/recipes/edit/:id" element={<Navigate to="/recipe/edit/:id" replace />} />
-                  <Route path="/my-recipes" element={<Navigate to="/profile" replace />} />
-                  {/* 404 page */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </main>
-          </div>
-        </Router>
-      </AuthProvider>
-    </ErrorBoundary>
+    <HelmetProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
+              <Navbar />
+              <main className="flex-1 pt-16">
+                <Suspense fallback={<div className="text-center py-8">טוען...</div>}>
+                  <Routes>
+                    <Route path="/" element={<RecipeList />} />
+                    <Route path="/recipe/:id" element={<RecipeDetail />} />
+                    <Route path="/recipe/new" element={
+                      <ProtectedRoute>
+                        <RecipeForm />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/recipe/edit/:id" element={
+                      <ProtectedRoute>
+                        <RecipeForm />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    } />
+                    {/* Redirects for old routes */}
+                    <Route path="/recipes" element={<Navigate to="/" replace />} />
+                    <Route path="/recipes/:id" element={<Navigate to="/recipe/:id" replace />} />
+                    <Route path="/recipes/new" element={<Navigate to="/recipe/new" replace />} />
+                    <Route path="/recipes/edit/:id" element={<Navigate to="/recipe/edit/:id" replace />} />
+                    <Route path="/my-recipes" element={<Navigate to="/profile" replace />} />
+                    {/* 404 page */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </main>
+              <Footer />
+            </div>
+          </Router>
+        </AuthProvider>
+      </ErrorBoundary>
+    </HelmetProvider>
   );
 }
 
