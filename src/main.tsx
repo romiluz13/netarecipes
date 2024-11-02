@@ -1,22 +1,16 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Auth0Provider } from '@auth0/auth0-react';
-import App from './App.tsx';
-import './index.css';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import * as serviceWorker from './serviceWorker';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Auth0Provider
-      domain="dev-lovfh35mihqwacds.us.auth0.com"
-      clientId="e8GfuYrIKj6ygWOxI9EkzzaehBHgkFUR"
-      authorizationParams={{
-        redirect_uri: window.location.origin,
-        scope: 'openid profile email'
-      }}
-      useRefreshTokens={true}
-      cacheLocation="localstorage"
-    >
-      <App />
-    </Auth0Provider>
-  </StrictMode>
-);
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: https://cra.link/PWA
+serviceWorker.register();

@@ -1,19 +1,37 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /recipes/{userId}/{allPaths=**} {
-      allow read: if 
-        // מאפשר קריאה לכולם כי התמונות הן ציבוריות
-        true;
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size <= 5 * 1024 * 1024; // 5MB max
+    }
+
+    // Recipe images
+    match /recipe-images/{recipeId}/{imageFile} {
+      // Family members can view all recipe images
+      allow read: if isAuthenticated();
       
-      allow write: if
-        // מאפשר העלאה רק למשתמש המחובר בתיקייה שלו
-        request.auth != null &&
-        request.auth.uid == userId &&
-        // מגביל את גודל הקובץ ל-5MB
-        request.resource.size < 5 * 1024 * 1024 &&
-        // מאפשר רק תמונות
-        request.resource.contentType.matches('image/.*');
+      // Family members can upload images if they're logged in
+      allow create: if isAuthenticated() && isValidImage();
+      
+      // Only recipe owner can modify or delete images
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // User profile images
+    match /user-images/{userId}/{imageFile} {
+      // Family members can view profile images
+      allow read: if isAuthenticated();
+      
+      // Users can manage their own profile images
+      allow create, update, delete: if isAuthenticated() && 
+                                     request.auth.uid == userId && 
+                                     isValidImage();
     }
   }
-} 
+}

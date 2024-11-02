@@ -1,0 +1,42 @@
+run = "npm install && npm run dev"
+hidden = [".config", "package-lock.json"]
+modules = ["nodejs-20"]
+
+[nix]
+channel = "stable-22_11"
+
+[env]
+XDG_CONFIG_HOME = "/home/runner/.config"
+PATH = "/home/runner/$REPL_SLUG/node_modules/.bin:/home/runner/.npm-packages/bin"
+
+[packager]
+language = "nodejs"
+  [packager.features]
+  packageSearch = true
+  guessImports = true
+  enabledForHosting = true
+
+[unitTest]
+language = "nodejs"
+
+[languages]
+[languages.javascript]
+pattern = "**/{*.js,*.jsx,*.ts,*.tsx}"
+[languages.javascript.languageServer]
+start = "typescript-language-server --stdio"
+
+[deployment]
+run = ["sh", "-c", "npm run preview"]
+deploymentTarget = "static"
+publicDir = "dist"
+
+[deployment.build]
+command = "npm run build"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
+
+[[ports]]
+localPort = 3001
+externalPort = 3001

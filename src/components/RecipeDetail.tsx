@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, updateDoc, increment, setDoc, deleteField, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Recipe } from '../types/recipe';
 import { Clock, Users, ChefHat, Edit, Trash2, Heart, Share2, Loader2, Printer } from 'lucide-react';
 import { RecipeDetailSkeleton } from './Skeleton';
+import Comments from './Comments';
 
 function RecipeDetail() {
   const { id } = useParams();
@@ -16,61 +17,118 @@ function RecipeDetail() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
 
   useEffect(() => {
     const fetchRecipeAndAuthor = async () => {
       if (!id) return;
       
+      setLoading(true);
       try {
-        const docRef = doc(db, 'recipes', id);
-        const docSnap = await getDoc(docRef);
+        const recipeRef = doc(db, 'recipes', id);
+        const recipeSnap = await getDoc(recipeRef);
         
-        if (docSnap.exists()) {
-          const recipeData = { id: docSnap.id, ...docSnap.data() } as Recipe;
-          setRecipe(recipeData);
-          
-          // Fetch author data
-          const authorRef = doc(db, 'users', recipeData.userId);
-          const authorSnap = await getDoc(authorRef);
-          if (authorSnap.exists()) {
-            setAuthorData(authorSnap.data());
-          }
-        } else {
+        if (!recipeSnap.exists()) {
           navigate('/recipes');
+          return;
+        }
+
+        const recipeData = {
+          id: recipeSnap.id,
+          ...recipeSnap.data(),
+          createdAt: recipeSnap.data().createdAt?.toDate(),
+          updatedAt: recipeSnap.data().updatedAt?.toDate()
+        } as Recipe;
+        
+        setRecipe(recipeData);
+
+        // Fetch author data
+        const authorRef = doc(db, 'users', recipeData.userId);
+        const authorSnap = await getDoc(authorRef);
+        if (authorSnap.exists()) {
+          setAuthorData(authorSnap.data());
+        }
+
+        // Check if user has liked
+        if (user?.uid) {
+          const likeRef = doc(db, 'recipes', id, 'likes', user.uid);
+          const likeSnap = await getDoc(likeRef);
+          setHasLiked(likeSnap.exists());
         }
       } catch (error) {
         console.error('Error fetching recipe:', error);
+        setError('אירעה שגיאה בטעינת המתכון');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRecipeAndAuthor();
-  }, [id, navigate]);
+  }, [id, navigate, user?.uid]);
 
   const handleDelete = async () => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק מתכון זה?')) return;
     
     setDeleting(true);
     try {
+      // מחיקת לייקים
+      const likesRef = collection(db, 'recipes', id!, 'likes');
+      const likesSnapshot = await getDocs(likesRef);
+      const likesPromises = likesSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(likesPromises);
+
+      // מחיקת תגובות
+      const commentsRef = collection(db, 'recipes', id!, 'comments');
+      const commentsSnapshot = await getDocs(commentsRef);
+      const commentsPromises = commentsSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(commentsPromises);
+
+      // מחיקת המתכון עצמו
       await deleteDoc(doc(db, 'recipes', id!));
-      navigate('/recipes');
+      
+      navigate('/');
     } catch (error) {
       console.error('Error deleting recipe:', error);
+      alert('אירעה שגיאה במחיקת המתכון');
+    } finally {
       setDeleting(false);
     }
   };
 
+  const handleEdit = () => {
+    navigate(`/recipes/edit/${id}`);
+  };
+
   const handleLike = async () => {
-    if (!recipe || liking) return;
+    if (!recipe || !user?.uid || liking) return;
     
     setLiking(true);
     try {
       const recipeRef = doc(db, 'recipes', recipe.id);
-      await updateDoc(recipeRef, {
-        likes: increment(1)
-      });
-      setRecipe(prev => prev ? { ...prev, likes: prev.likes + 1 } : null);
+      const likeRef = doc(db, 'recipes', recipe.id, 'likes', user.uid);
+
+      if (hasLiked) {
+        await deleteDoc(likeRef);
+        await updateDoc(recipeRef, {
+          likes: increment(-1)
+        });
+        setHasLiked(false);
+        setRecipe(prev => prev ? { ...prev, likes: (prev.likes || 1) - 1 } : null);
+      } else {
+        await setDoc(likeRef, {
+          userId: user.uid,
+          createdAt: new Date()
+        });
+        await updateDoc(recipeRef, {
+          likes: increment(1)
+        });
+        setHasLiked(true);
+        setRecipe(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null);
+      }
     } catch (error) {
       console.error('Error liking recipe:', error);
     } finally {
@@ -82,17 +140,26 @@ function RecipeDetail() {
     if (!recipe) return;
     
     try {
-      await navigator.share({
-        title: recipe.title,
-        text: recipe.description,
-        url: window.location.href
-      });
+      if (navigator.share) {
+        await navigator.share({
+          title: recipe.title,
+          text: recipe.description,
+          url: window.location.href
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('הקישור הועתק ללוח');
+      }
     } catch (error) {
       if (error instanceof Error && error.name !== 'AbortError') {
         console.error('Error sharing recipe:', error);
         // Fallback to copying link
-        await navigator.clipboard.writeText(window.location.href);
-        alert('הקישור הועתק ללוח');
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          alert('הקישור הועתק ללוח');
+        } catch (clipboardError) {
+          console.error('Error copying to clipboard:', clipboardError);
+        }
       }
     }
   };
@@ -108,8 +175,8 @@ function RecipeDetail() {
   if (!recipe) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="relative h-[400px] rounded-xl overflow-hidden">
+    <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+      <div className="relative h-[300px] md:h-[400px] rounded-xl overflow-hidden">
         <img
           src={recipe.imageUrl}
           alt={recipe.title}
@@ -117,17 +184,18 @@ function RecipeDetail() {
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-        <div className="absolute bottom-0 right-0 left-0 p-8">
+        <div className="absolute bottom-0 right-0 left-0 p-4 md:p-8">
           <div className="flex items-center gap-4 text-white">
             {authorData?.photoURL && (
               <img
                 src={authorData.photoURL}
                 alt={authorData.displayName}
-                className="w-12 h-12 rounded-full border-2 border-white"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white"
+                loading="lazy"
               />
             )}
             <div>
-              <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{recipe.title}</h1>
               <p className="text-sm opacity-90">
                 פורסם על ידי {authorData?.displayName || 'משתמש לא ידוע'}
               </p>
@@ -136,20 +204,20 @@ function RecipeDetail() {
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+        <div className="flex flex-wrap gap-2">
           {user?.uid === recipe.userId && (
             <>
               <button
-                onClick={() => navigate(`/recipes/edit/${recipe.id}`)}
-                className="btn btn-secondary"
+                onClick={handleEdit}
+                className="btn btn-secondary flex-1 sm:flex-none"
               >
                 <Edit className="w-4 h-4 ml-2" />
                 ערוך
               </button>
               <button
                 onClick={handleDelete}
-                className="btn btn-error"
+                className="btn btn-error flex-1 sm:flex-none"
                 disabled={deleting}
               >
                 {deleting ? (
@@ -163,35 +231,43 @@ function RecipeDetail() {
           )}
         </div>
         
-        <div className="flex gap-2">
-          <button
-            onClick={handleLike}
-            className="btn btn-secondary"
-            disabled={liking}
+        <div className="flex flex-wrap gap-2">
+          {user && (
+            <button
+              onClick={handleLike}
+              className={`btn ${hasLiked ? 'btn-primary' : 'btn-secondary'} flex-1 sm:flex-none`}
+              disabled={liking}
+            >
+              <Heart className={`w-4 h-4 ml-2 ${hasLiked ? 'fill-current' : ''}`} />
+              {recipe.likes || 0}
+            </button>
+          )}
+          <button 
+            onClick={handleShare} 
+            className="btn btn-secondary flex-1 sm:flex-none"
           >
-            <Heart className={`w-4 h-4 ml-2 ${recipe.likes > 0 ? 'fill-current' : ''}`} />
-            {recipe.likes || 0}
-          </button>
-          <button onClick={handleShare} className="btn btn-secondary">
             <Share2 className="w-4 h-4 ml-2" />
             שתף
           </button>
-          <button onClick={handlePrint} className="btn btn-secondary">
+          <button 
+            onClick={handlePrint} 
+            className="btn btn-secondary flex-1 sm:flex-none print:hidden"
+          >
             <Printer className="w-4 h-4 ml-2" />
             הדפס
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="card p-6">
-            <h2 className="text-2xl font-bold mb-4">תיאור</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="card p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold mb-4">תיאור</h2>
             <p className="text-gray-700 whitespace-pre-line">{recipe.description}</p>
           </div>
 
-          <div className="card p-6">
-            <h2 className="text-2xl font-bold mb-6">הוראות הכנה</h2>
+          <div className="card p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold mb-6">הוראות הכנה</h2>
             <div className="space-y-6">
               {recipe.instructions.map((instruction, index) => (
                 <div key={index} className="flex gap-4">
@@ -205,16 +281,20 @@ function RecipeDetail() {
           </div>
 
           {recipe.notes && (
-            <div className="card p-6">
-              <h2 className="text-2xl font-bold mb-4">הערות נוספות</h2>
+            <div className="card p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-4">הערות נוספות</h2>
               <p className="text-gray-700 whitespace-pre-line">{recipe.notes}</p>
             </div>
           )}
+
+          <div className="card p-4 md:p-6 print:hidden">
+            <Comments recipeId={recipe.id} />
+          </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="card p-6">
-            <h2 className="text-2xl font-bold mb-6">מצרכים</h2>
+        <div className="space-y-6">
+          <div className="card p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold mb-6">מצרכים</h2>
             <ul className="space-y-4">
               {recipe.ingredients.map((ingredient, index) => (
                 <li key={index} className="flex justify-between items-center">
@@ -227,10 +307,8 @@ function RecipeDetail() {
             </ul>
           </div>
 
-          <div className="card p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">קטגוריות</h2>
-            </div>
+          <div className="card p-4 md:p-6">
+            <h2 className="text-xl md:text-2xl font-bold mb-4">קטגוריות</h2>
             <div className="flex flex-wrap gap-2">
               {recipe.categories.map(category => (
                 <span

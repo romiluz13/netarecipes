@@ -1,16 +1,19 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ChefHat, Menu } from 'lucide-react';
+import { ChefHat } from 'lucide-react';
 
 function Navbar() {
   const { user, signInWithGoogle, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
 
   const handleLogin = async () => {
     try {
       await signInWithGoogle();
-      navigate('/recipes'); // ניווט לעמוד המתכונים אחרי התחברות מוצלחת
+      navigate('/');
     } catch (error) {
       console.error('Error signing in:', error);
     }
@@ -19,7 +22,7 @@ function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login'); // ניווט לעמוד ההתחברות אחרי התנתקות
+      navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -31,14 +34,41 @@ function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              <ChefHat className="w-8 h-8 text-primary-500" />
-              <span className="font-bold text-xl">המתכונים שלי</span>
+              <img
+                src="/assets/chef-hat.svg"
+                alt="Logo"
+                className="w-8 h-8 text-primary-500"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = document.createElement('span');
+                  fallback.innerHTML = '<ChefHat className="w-8 h-8 text-primary-500" />';
+                  target.parentNode?.appendChild(fallback);
+                }}
+              />
+              <span className="font-bold text-xl">מתכוני המשפחה</span>
             </Link>
-            
+
             {user && (
               <div className="hidden md:flex items-center gap-6">
-                <Link to="/recipes" className="nav-link">מתכונים</Link>
-                <Link to="/categories" className="nav-link">קטגוריות</Link>
+                <Link 
+                  to="/" 
+                  className={`nav-link ${isActive('/') ? 'text-primary-600 font-medium' : ''}`}
+                >
+                  מתכוני המשפחה
+                </Link>
+                <Link 
+                  to="/profile" 
+                  className={`nav-link ${isActive('/profile') ? 'text-primary-600 font-medium' : ''}`}
+                >
+                  המתכונים שלי
+                </Link>
+                <Link 
+                  to="/recipe/new" 
+                  className="btn btn-primary btn-sm"
+                >
+                  מתכון חדש
+                </Link>
               </div>
             )}
           </div>
@@ -46,11 +76,20 @@ function Navbar() {
           <div className="flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-4">
-                <img
-                  src={user.photoURL || ''}
-                  alt={user.displayName || 'תמונת פרופיל'}
-                  className="w-8 h-8 rounded-full"
-                />
+                <Link to="/profile" className="flex items-center gap-2">
+                  <img
+                    src={user.photoURL || '/assets/placeholder-avatar.svg'}
+                    alt={user.displayName || 'תמונת פרופיל'}
+                    className="w-8 h-8 rounded-full border border-gray-200"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/assets/placeholder-avatar.svg';
+                    }}
+                  />
+                  <span className="hidden md:inline text-sm text-gray-700">
+                    {user.displayName}
+                  </span>
+                </Link>
                 <button onClick={handleLogout} className="btn btn-ghost">
                   התנתק
                 </button>

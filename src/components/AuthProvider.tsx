@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { doc, setDoc, getFirestore } from 'firebase/firestore';
+import { db } from '../firebase'; // Use the initialized instance from firebase.ts
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, getIdTokenClaims } = useAuth0();
-  const db = getFirestore();
 
   useEffect(() => {
     const syncAuth = async () => {
@@ -28,7 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     syncAuth();
-  }, [isAuthenticated, user, db]);
+  }, [isAuthenticated, user]);
 
   return <>{children}</>;
-} 
+}
+
+export default AuthProvider;
