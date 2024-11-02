@@ -7,6 +7,7 @@ import { Recipe } from '../types/Recipe';
 import { Clock, Users, ChefHat, Edit, Trash2, Heart, Share2, Loader2, Printer } from 'lucide-react';
 import { RecipeDetailSkeleton } from './Skeleton';
 import Comments from './Comments';
+import MetaTags from '../components/MetaTags';
 
 function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,7 +70,7 @@ function RecipeDetail() {
   }, [id, navigate, user?.uid]);
 
   const handleDelete = async () => {
-    if (!id || !window.confirm('האם אתה בטוח שברצונך למחוק מתכון זה?')) return;
+    if (!id || !window.confirm('האם אתה בטוח שברצונך למחוק מתכון ז?')) return;
     
     setDeleting(true);
     try {
@@ -189,164 +190,176 @@ function RecipeDetail() {
 
   if (!recipe) return null;
 
+  const recipeDescription = `${recipe.title} - ${recipe.description || ''} 
+    ${recipe.prepTime ? `זמן הכנה: ${recipe.prepTime} דקות` : ''} 
+    ${recipe.servings ? `מתאים ל-${recipe.servings} סועדים` : ''}`;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
-      <div className="relative h-[300px] md:h-[400px] rounded-xl overflow-hidden">
-        {recipe.imageUrl ? (
-          <img
-            src={recipe.imageUrl}
-            alt={recipe.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <RecipePlaceholder />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-        <div className="absolute bottom-0 right-0 left-0 p-4 md:p-8">
-          <div className="flex items-center gap-4 text-white">
-            {authorData?.photoURL && (
-              <img
-                src={authorData.photoURL}
-                alt={authorData.displayName || ''}
-                className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white"
-                loading="lazy"
-              />
-            )}
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{recipe.title}</h1>
-              <p className="text-sm opacity-90">
-                פורסם על ידי {authorData?.displayName || 'משתמש לא ידוע'}
-              </p>
+    <>
+      <MetaTags
+        title={`${recipe.title} - מתכוני המשפחה`}
+        description={recipeDescription}
+        image={recipe.imageUrl || '/placeholder-recipe.jpg'}
+      />
+      
+      <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+        <div className="relative h-[300px] md:h-[400px] rounded-xl overflow-hidden">
+          {recipe.imageUrl ? (
+            <img
+              src={recipe.imageUrl}
+              alt={recipe.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <RecipePlaceholder />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+          <div className="absolute bottom-0 right-0 left-0 p-4 md:p-8">
+            <div className="flex items-center gap-4 text-white">
+              {authorData?.photoURL && (
+                <img
+                  src={authorData.photoURL}
+                  alt={authorData.displayName || ''}
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white"
+                  loading="lazy"
+                />
+              )}
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">{recipe.title}</h1>
+                <p className="text-sm opacity-90">
+                  פורסם על ידי {authorData?.displayName || 'משתמש לא ידוע'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-        <div className="flex flex-wrap gap-2">
-          {user?.uid === recipe.userId && (
-            <>
-              <button
-                onClick={handleEdit}
-                className="btn btn-secondary flex-1 sm:flex-none"
-              >
-                <Edit className="w-4 h-4 ml-2" />
-                ערוך
-              </button>
-              <button
-                onClick={handleDelete}
-                className="btn btn-error flex-1 sm:flex-none"
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4 ml-2" />
-                )}
-                מחק
-              </button>
-            </>
-          )}
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          {user && (
-            <button
-              onClick={handleLike}
-              className={`btn ${hasLiked ? 'btn-primary' : 'btn-secondary'} flex-1 sm:flex-none`}
-              disabled={liking}
-            >
-              <Heart className={`w-4 h-4 ml-2 ${hasLiked ? 'fill-current' : ''}`} />
-              {recipe.likes || 0}
-            </button>
-          )}
-          <button 
-            onClick={handleShare} 
-            className="btn btn-secondary flex-1 sm:flex-none"
-            disabled={sharing}
-          >
-            {sharing ? (
-              <Loader2 className="w-4 h-4 animate-spin ml-2" />
-            ) : (
-              <Share2 className="w-4 h-4 ml-2" />
-            )}
-            שתף
-          </button>
-          <button 
-            onClick={handlePrint} 
-            className="btn btn-secondary flex-1 sm:flex-none print:hidden"
-          >
-            <Printer className="w-4 h-4 ml-2" />
-            הדפס
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="card p-4 md:p-6">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">תיאור</h2>
-            <p className="text-gray-700 whitespace-pre-line">{recipe.description}</p>
-          </div>
-
-          <div className="card p-4 md:p-6">
-            <h2 className="text-xl md:text-2xl font-bold mb-6">הוראות הכנה</h2>
-            <div className="space-y-6">
-              {recipe.instructions.map((instruction, index) => (
-                <div key={index} className="flex gap-4">
-                  <span className="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center font-medium flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <p className="text-gray-700">{instruction}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {recipe.notes && (
-            <div className="card p-4 md:p-6">
-              <h2 className="text-xl md:text-2xl font-bold mb-4">הערות נוספות</h2>
-              <p className="text-gray-700 whitespace-pre-line">{recipe.notes}</p>
-            </div>
-          )}
-
-          <div className="card p-4 md:p-6 print:hidden">
-            <Comments recipeId={recipe.id} recipeOwnerId={recipe.userId} />
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="card p-4 md:p-6">
-            <h2 className="text-xl md:text-2xl font-bold mb-6">מצרכים</h2>
-            <ul className="space-y-4">
-              {recipe.ingredients.map((ingredient, index) => (
-                <li key={index} className="flex justify-between items-center">
-                  <span className="text-gray-700">{ingredient.item}</span>
-                  <span className="text-gray-500">
-                    {ingredient.amount} {ingredient.unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="card p-4 md:p-6">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">קטגוריות</h2>
-            <div className="flex flex-wrap gap-2">
-              {recipe.categories.map(category => (
-                <span
-                  key={category}
-                  className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+          <div className="flex flex-wrap gap-2">
+            {user?.uid === recipe.userId && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="btn btn-secondary flex-1 sm:flex-none"
                 >
-                  {category}
-                </span>
-              ))}
+                  <Edit className="w-4 h-4 ml-2" />
+                  ערוך
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="btn btn-error flex-1 sm:flex-none"
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 ml-2" />
+                  )}
+                  מחק
+                </button>
+              </>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {user && (
+              <button
+                onClick={handleLike}
+                className={`btn ${hasLiked ? 'btn-primary' : 'btn-secondary'} flex-1 sm:flex-none`}
+                disabled={liking}
+              >
+                <Heart className={`w-4 h-4 ml-2 ${hasLiked ? 'fill-current' : ''}`} />
+                {recipe.likes || 0}
+              </button>
+            )}
+            <button 
+              onClick={handleShare} 
+              className="btn btn-secondary flex-1 sm:flex-none"
+              disabled={sharing}
+            >
+              {sharing ? (
+                <Loader2 className="w-4 h-4 animate-spin ml-2" />
+              ) : (
+                <Share2 className="w-4 h-4 ml-2" />
+              )}
+              שתף
+            </button>
+            <button 
+              onClick={handlePrint} 
+              className="btn btn-secondary flex-1 sm:flex-none print:hidden"
+            >
+              <Printer className="w-4 h-4 ml-2" />
+              הדפס
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="card p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-4">תיאור</h2>
+              <p className="text-gray-700 whitespace-pre-line">{recipe.description}</p>
+            </div>
+
+            <div className="card p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-6">הוראות הכנה</h2>
+              <div className="space-y-6">
+                {recipe.instructions.map((instruction, index) => (
+                  <div key={index} className="flex gap-4">
+                    <span className="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center font-medium flex-shrink-0">
+                      {index + 1}
+                    </span>
+                    <p className="text-gray-700">{instruction}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {recipe.notes && (
+              <div className="card p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold mb-4">הערות נוספות</h2>
+                <p className="text-gray-700 whitespace-pre-line">{recipe.notes}</p>
+              </div>
+            )}
+
+            <div className="card p-4 md:p-6 print:hidden">
+              <Comments recipeId={recipe.id} recipeOwnerId={recipe.userId} />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="card p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-6">מצרכים</h2>
+              <ul className="space-y-4">
+                {recipe.ingredients.map((ingredient, index) => (
+                  <li key={index} className="flex justify-between items-center">
+                    <span className="text-gray-700">{ingredient.item}</span>
+                    <span className="text-gray-500">
+                      {ingredient.amount} {ingredient.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="card p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-4">קטגוריות</h2>
+              <div className="flex flex-wrap gap-2">
+                {recipe.categories.map(category => (
+                  <span
+                    key={category}
+                    className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

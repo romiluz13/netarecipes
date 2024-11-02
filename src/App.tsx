@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { HelmetProvider } from 'react-helmet-async';
+import MetaTags from './components/MetaTags';
 
 const RecipeList = lazy(() => import('./components/RecipeList'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -98,6 +99,11 @@ function App() {
 
   return (
     <HelmetProvider>
+      <MetaTags
+        title="תכוני המשפחה"
+        description="האתר המשפחתי שלנו לשיתוף מתכונים, מסורת וטעמים משפחתיים"
+        image="/social-preview.jpg" // תמונה ייצוגית של האתר
+      />
       <ErrorBoundary>
         <AuthProvider>
           <Router>

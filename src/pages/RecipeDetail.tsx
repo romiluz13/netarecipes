@@ -1,4 +1,4 @@
-import MetaTags from '../components/MetaTags';
+import { MetaTags } from '../components/MetaTags';
 
 function RecipeDetail() {
   // ... existing code ...

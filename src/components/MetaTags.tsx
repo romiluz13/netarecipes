@@ -8,7 +8,7 @@ interface MetaTagsProps {
 }
 
 function MetaTags({ title, description, image, url }: MetaTagsProps) {
-  const defaultImage = '/logo.png'; // תמונת ברירת מחדל של האתר
+  const defaultImage = '/logo.png';
   const defaultUrl = window.location.href;
 
   return (
