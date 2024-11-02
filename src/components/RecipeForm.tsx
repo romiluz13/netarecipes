@@ -7,6 +7,20 @@ import { db, storage } from '../firebase';
 import { Recipe, validateRecipe } from '../types/Recipe';
 import { Loader2, Plus, Trash2, X } from 'lucide-react';
 
+// יחידות מידה נפוצות במתכונים
+const commonUnits = [
+  'כוס',
+  'כפית',
+  'כף',
+  'גרם',
+  'מ"ל',
+  'יחידה',
+  'חבילה',
+  'קופסה',
+  'שקית',
+  'לטעם'
+];
+
 function RecipeForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -14,7 +28,7 @@ function RecipeForm() {
   const [recipe, setRecipe] = useState<Partial<Recipe>>({
     title: '',
     description: '',
-    ingredients: [{ item: '', amount: '', unit: '' }],
+    ingredients: [{ item: '', amount: '', unit: 'יחידה' }],
     instructions: [''],
     prepTime: '',
     cookTime: '',
@@ -60,7 +74,11 @@ function RecipeForm() {
 
   const handleIngredientChange = (index: number, field: keyof Recipe['ingredients'][0], value: string) => {
     const newIngredients = [...(recipe.ingredients || [])];
-    newIngredients[index] = { ...newIngredients[index], [field]: value };
+    newIngredients[index] = { 
+      ...newIngredients[index], 
+      [field]: value,
+      ...(field === 'amount' && { amount: value.replace(/[^0-9.]/g, '') })
+    };
     setRecipe({ ...recipe, ingredients: newIngredients });
   };
 
@@ -74,21 +92,25 @@ function RecipeForm() {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   };
 
-  const handleAddCategory = () => {
-    if (newCategory.trim() && !recipe.categories?.includes(newCategory.trim())) {
-      setRecipe({
-        ...recipe,
-        categories: [...(recipe.categories || []), newCategory.trim()]
-      });
-      setNewCategory('');
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    if (value.endsWith(' ')) {
+      const newCategory = value.trim();
+      if (newCategory && !recipe.categories.includes(newCategory)) {
+        setRecipe({
+          ...recipe,
+          categories: [...recipe.categories, newCategory]
+        });
+        setNewCategory('');
+      }
+    } else {
+      setNewCategory(value);
     }
   };
 
@@ -147,83 +169,85 @@ function RecipeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-4 md:p-6 space-y-8 bg-white shadow-md rounded-lg">
-      <h1 className="text-3xl font-bold mb-6 text-center">{id ? 'עריכת מתכון' : 'מתכון חדש'}</h1>
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-4 space-y-6">
+      <h1 className="text-2xl font-bold mb-4">{id ? 'עריכת מתכון' : 'מתכון חדש'}</h1>
       
-      <div className="grid gap-6">
-        <div className="space-y-4">
+      {/* שם המתכון ותיאור */}
+      <div className="card p-4 md:p-6">
+        <label className="block">
+          <span className="text-gray-700 font-semibold">שם המתכון</span>
+          <input
+            type="text"
+            value={recipe.title}
+            onChange={(e) => setRecipe({ ...recipe, title: e.target.value })}
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+            required
+            placeholder="הכנס את שם המתכון"
+          />
+        </label>
+
+        <label className="block mt-4">
+          <span className="text-gray-700 font-semibold">תיאור</span>
+          <textarea
+            value={recipe.description}
+            onChange={(e) => setRecipe({ ...recipe, description: e.target.value })}
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+            rows={3}
+            required
+            placeholder="תאר את המתכון בקצרה"
+          />
+        </label>
+      </div>
+
+      {/* פרטים טכניים */}
+      <div className="card p-4 md:p-6">
+        <h2 className="text-xl font-bold mb-4">פרטים טכניים</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="block">
-            <span className="text-gray-700 font-semibold">שם המתכון</span>
+            <span className="text-gray-700 font-semibold">זמן הכנה (דקות)</span>
             <input
-              type="text"
-              value={recipe.title}
-              onChange={(e) => setRecipe({ ...recipe, title: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+              type="number"
+              value={recipe.prepTime}
+              onChange={(e) => setRecipe({ ...recipe, prepTime: Number(e.target.value) })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+              min="0"
+              placeholder="לדוגמה: 30"
               required
             />
           </label>
 
           <label className="block">
-            <span className="text-gray-700 font-semibold">תיאור</span>
-            <textarea
-              value={recipe.description}
-              onChange={(e) => setRecipe({ ...recipe, description: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-              rows={3}
-            />
-          </label>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <label className="block">
-            <span className="text-gray-700 font-semibold">זמן הכנה</span>
+            <span className="text-gray-700 font-semibold">זמן בישול (דקות)</span>
             <input
-              type="text"
-              value={recipe.prepTime}
-              onChange={(e) => setRecipe({ ...recipe, prepTime: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-              placeholder="לדוגמה: 20 דקות"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-gray-700 font-semibold">זמן בישול</span>
-            <input
-              type="text"
+              type="number"
               value={recipe.cookTime}
-              onChange={(e) => setRecipe({ ...recipe, cookTime: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-              placeholder="לדוגמה: שעה"
+              onChange={(e) => setRecipe({ ...recipe, cookTime: Number(e.target.value) })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+              min="0"
+              placeholder="לדוגמה: 45"
+              required
             />
           </label>
 
           <label className="block">
             <span className="text-gray-700 font-semibold">מספר מנות</span>
             <input
-              type="text"
+              type="number"
               value={recipe.servings}
-              onChange={(e) => setRecipe({ ...recipe, servings: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-              placeholder="לדוגמה: 4-6 מנות"
+              onChange={(e) => setRecipe({ ...recipe, servings: Number(e.target.value) })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+              min="1"
+              placeholder="לדוגמה: 4"
+              required
             />
           </label>
         </div>
+      </div>
 
-        <label className="block">
-          <span className="text-gray-700 font-semibold">רמת קושי</span>
-          <select
-            value={recipe.difficulty}
-            onChange={(e) => setRecipe({ ...recipe, difficulty: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-          >
-            <option value="קל">קל</option>
-            <option value="בינוני">בינוני</option>
-            <option value="מאתגר">מאתגר</option>
-          </select>
-        </label>
-
-        <div className="space-y-2">
-          <span className="text-gray-700 font-semibold block">קטגוריות</span>
+      {/* קטגוריות */}
+      <div className="card p-4 md:p-6">
+        <h2 className="text-xl font-bold mb-4">קטגוריות</h2>
+        <div className="space-y-4">
           <div className="flex flex-wrap gap-2 mb-2">
             {recipe.categories?.map((category) => (
               <span key={category} className="bg-gray-100 px-3 py-1 rounded-full flex items-center gap-1">
@@ -238,115 +262,192 @@ function RecipeForm() {
               </span>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              className="flex-grow rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-              placeholder="הוסף קטגוריה חדשה"
-            />
-            <button
-              type="button"
-              onClick={handleAddCategory}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-            >
-              הוסף
-            </button>
-          </div>
+          <input
+            type="text"
+            value={newCategory}
+            onChange={handleCategoryChange}
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+            placeholder="הקלד קטגוריה ולחץ רווח להוספה"
+          />
         </div>
+      </div>
 
+      {/* מצרכים */}
+      <div className="card p-4 md:p-6">
+        <h2 className="text-xl font-bold mb-4">מצרכים</h2>
         <div className="space-y-4">
-          <span className="text-gray-700 font-semibold block">הוראות הכנה</span>
-          {recipe.instructions?.map((instruction, index) => (
-            <div key={index} className="flex gap-2">
-              <textarea
-                value={instruction}
-                onChange={(e) => handleInstructionChange(index, e.target.value)}
-                className="flex-grow rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-                rows={2}
-                placeholder={`שלב ${index + 1}`}
+          {recipe.ingredients.map((ingredient, idx) => (
+            <div key={idx} className="flex gap-2 items-start">
+              <input
+                type="text"
+                value={ingredient.item}
+                onChange={(e) => handleIngredientChange(idx, 'item', e.target.value)}
+                placeholder="שם המצרך"
+                className="flex-grow rounded-lg border-gray-300"
                 required
               />
-              <button
-                type="button"
-                onClick={() => {
-                  const newInstructions = recipe.instructions?.filter((_, i) => i !== index);
-                  setRecipe({ ...recipe, instructions: newInstructions });
-                }}
-                className="text-red-500 hover:text-red-700 p-2"
+              <input
+                type="number"
+                value={ingredient.amount}
+                onChange={(e) => handleIngredientChange(idx, 'amount', e.target.value)}
+                placeholder="כמות"
+                className="w-24 rounded-lg border-gray-300"
+                required
+              />
+              <select
+                value={ingredient.unit}
+                onChange={(e) => handleIngredientChange(idx, 'unit', e.target.value)}
+                className="w-28 rounded-lg border-gray-300"
               >
-                <Trash2 className="w-5 h-5" />
-              </button>
+                {commonUnits.map(unit => (
+                  <option key={unit} value={unit}>{unit}</option>
+                ))}
+              </select>
+              {recipe.ingredients.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newIngredients = recipe.ingredients.filter((_, i) => i !== idx);
+                    setRecipe({ ...recipe, ingredients: newIngredients });
+                  }}
+                  className="text-red-500 hover:text-red-600 transition-colors p-2 rounded-lg"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
             </div>
           ))}
+          
+          {/* כפתור הוסף מצרך - עוצב מחדש */}
           <button
             type="button"
             onClick={() => setRecipe({
               ...recipe,
-              instructions: [...(recipe.instructions || []), '']
+              ingredients: [...recipe.ingredients, { item: '', amount: '', unit: 'יחידה' }]
             })}
-            className="btn btn-secondary btn-sm w-full"
+            className="w-full px-4 py-2 text-sm bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-colors flex items-center justify-center gap-2"
           >
-            <Plus className="w-4 h-4 ml-2" />
-            הוסף שלב
+            <Plus className="w-4 h-4" />
+            הוסף מצרך
           </button>
         </div>
+      </div>
 
+      {/* הוראות הכנה */}
+      <div className="card p-4 md:p-6">
+        <h2 className="text-xl font-bold mb-4">הוראות הכנה</h2>
+        {recipe.instructions?.map((instruction, index) => (
+          <div key={index} className="flex gap-2">
+            <textarea
+              value={instruction}
+              onChange={(e) => handleInstructionChange(index, e.target.value)}
+              className="flex-grow rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+              rows={2}
+              placeholder={`שלב ${index + 1}`}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const newInstructions = recipe.instructions?.filter((_, i) => i !== index);
+                setRecipe({ ...recipe, instructions: newInstructions });
+              }}
+              className="text-red-500 hover:text-red-700 p-2"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setRecipe({
+            ...recipe,
+            instructions: [...(recipe.instructions || []), '']
+          })}
+          className="btn btn-secondary btn-sm w-full"
+        >
+          <Plus className="w-4 h-4 ml-2" />
+          הוסף שלב
+        </button>
+      </div>
+
+      {/* תמונת מתכון */}
+      <div className="card p-4 md:p-6">
+        <h2 className="text-xl font-bold mb-4">תמונת מתכון</h2>
         <div className="space-y-4">
-          <div>
-            <span className="text-gray-700 font-semibold block">תמונת מתכון</span>
-            {imagePreview && (
-              <div className="mt-2">
-                <img src={imagePreview} alt="תצוגה מקדימה" className="max-w-xs rounded-md" />
-              </div>
-            )}
+          {imagePreview && (
+            <div className="mt-2">
+              <img 
+                src={imagePreview} 
+                alt="תצוגה מקדימה" 
+                className="max-w-xs rounded-lg shadow-sm"
+              />
+            </div>
+          )}
+          
+          {/* Desktop File Input */}
+          <div className="md:block hidden">
             <input
               type="file"
               accept="image/*"
               onChange={handleImageChange}
-              className="mt-1 block w-full"
+              className="w-full file:mr-4 file:py-2 file:px-4 
+                       file:rounded-full file:border-0 
+                       file:text-sm file:font-semibold
+                       file:bg-primary-50 file:text-primary-700
+                       hover:file:bg-primary-100
+                       cursor-pointer"
             />
           </div>
 
-          <label className="block">
-            <span className="text-gray-700 font-semibold">הערות נוספות</span>
-            <textarea
-              value={recipe.notes}
-              onChange={(e) => setRecipe({ ...recipe, notes: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-              rows={3}
-            />
-          </label>
-
-          <div className="flex items-center">
+          {/* Mobile Camera and Gallery Options */}
+          <div className="md:hidden flex gap-2">
             <input
-              type="checkbox"
-              id="isPublic"
-              checked={recipe.isPublic}
-              onChange={(e) => setRecipe({ ...recipe, isPublic: e.target.checked })}
-              className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageChange}
+              className="hidden"
+              id="camera-input"
             />
-            <label htmlFor="isPublic" className="mr-2 block text-sm text-gray-900">
-              פרסם מתכון למשפחה
+            <label 
+              htmlFor="camera-input"
+              className="flex-1 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg 
+                       hover:bg-primary-100 transition-colors text-center cursor-pointer"
+            >
+              צלם תמונה
+            </label>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+              id="gallery-input"
+            />
+            <label 
+              htmlFor="gallery-input"
+              className="flex-1 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg 
+                       hover:bg-primary-100 transition-colors text-center cursor-pointer"
+            >
+              בחר מגלריה
             </label>
           </div>
         </div>
       </div>
 
-      {error && <div className="text-red-500 p-4 bg-red-50 rounded-lg">{error}</div>}
-      
+      {/* כפתורים */}
       <div className="flex justify-end gap-4">
         <button 
           type="button" 
           onClick={() => navigate(-1)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
         >
           ביטול
         </button>
         <button 
           type="submit" 
-          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           disabled={loading}
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (id ? 'עדכן מתכון' : 'צור מתכון')}

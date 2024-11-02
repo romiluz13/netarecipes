@@ -10,12 +10,12 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { HelmetProvider } from 'react-helmet-async';
 import MetaTags from './components/MetaTags';
+import RecipeForm from './components/RecipeForm';
 
 const RecipeList = lazy(() => import('./components/RecipeList'));
 const Profile = lazy(() => import('./pages/Profile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const RecipeDetail = lazy(() => import('./components/RecipeDetail'));
-const RecipeForm = lazy(() => import('./components/RecipeForm'));
 
 function LoginPrompt() {
   const { signInWithGoogle } = useAuth();
@@ -100,9 +100,9 @@ function App() {
   return (
     <HelmetProvider>
       <MetaTags
-        title="תכוני המשפחה"
+        title="מתכוני המשפחה"
         description="האתר המשפחתי שלנו לשיתוף מתכונים, מסורת וטעמים משפחתיים"
-        image="/social-preview.jpg" // תמונה ייצוגית של האתר
+        image="/chef-logo.png"
       />
       <ErrorBoundary>
         <AuthProvider>
@@ -114,16 +114,8 @@ function App() {
                   <Routes>
                     <Route path="/" element={<RecipeList />} />
                     <Route path="/recipe/:id" element={<RecipeDetail />} />
-                    <Route path="/recipe/new" element={
-                      <ProtectedRoute>
-                        <RecipeForm />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/recipe/edit/:id" element={
-                      <ProtectedRoute>
-                        <RecipeForm />
-                      </ProtectedRoute>
-                    } />
+                    <Route path="/recipe/new" element={<RecipeForm />} />
+                    <Route path="/recipe/edit/:id" element={<RecipeForm />} />
                     <Route path="/profile" element={
                       <ProtectedRoute>
                         <Profile />

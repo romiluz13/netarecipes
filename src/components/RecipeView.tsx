@@ -1,108 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Loader2, Edit, Trash2, Heart, Share2, Printer } from 'lucide-react';
-import Comments from './Comments';
-import { Recipe } from '../types/Recipe';
-import { useAuth } from '../contexts/AuthContext';
+import React from 'react';
 
-function RecipeDetail() {
-  const { id } = useParams<{ id: string }>();
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [deleting, setDeleting] = useState(false);
-  const [liking, setLiking] = useState(false);
-
-  useEffect(() => {
-    const fetchRecipe = async () => {
-      try {
-        if (!id) return;
-        const docRef = doc(db, 'recipes', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setRecipe({ id: docSnap.id, ...docSnap.data() } as Recipe);
-        } else {
-          setError('המתכון לא נמצא');
-        }
-      } catch (err) {
-        console.error('Error fetching recipe:', err);
-        setError('אירעה שגיאה בטעינת המתכון');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecipe();
-  }, [id]);
-
-  const handleDelete = async () => {
-    if (!window.confirm('האם אתה בטוח שברצונך למחוק את המתכון?')) return;
-    
-    setDeleting(true);
-    try {
-      await deleteDoc(doc(db, 'recipes', id!));
-      navigate('/');
-    } catch (error) {
-      console.error('Error deleting recipe:', error);
-      alert('אירעה שגיאה במחיקת המתכון');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-      </div>
-    );
-  }
-
-  if (error || !recipe) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-red-500">{error}</p>
-      </div>
-    );
-  }
-
+const RecipeView: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* כותרת ותמונה ראשית */}
+      {/* כותרת ותמונה ראשית - תמיד בראש */}
       <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 mb-6">
-        <div className="flex justify-between items-start mb-4">
-          <h1 className="text-2xl md:text-3xl font-bold">{recipe.title}</h1>
-          
-          {/* כפתורי פעולה */}
-          {user?.uid === recipe.userId && (
-            <div className="flex gap-2 print:hidden">
-              <button
-                onClick={() => navigate(`/recipe/edit/${recipe.id}`)}
-                className="btn btn-secondary btn-sm"
-              >
-                <Edit className="w-4 h-4 ml-1" />
-                ערוך
-              </button>
-              <button
-                onClick={handleDelete}
-                className="btn btn-error btn-sm"
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4 ml-1" />
-                )}
-                מחק
-              </button>
-            </div>
-          )}
-        </div>
-
+        <h1 className="text-2xl md:text-3xl font-bold mb-4">{recipe.title}</h1>
         {recipe.imageUrl && (
           <img 
             src={recipe.imageUrl} 
@@ -212,6 +115,6 @@ function RecipeDetail() {
       </div>
     </div>
   );
-}
+};
 
-export default RecipeDetail;
+export default RecipeView; 

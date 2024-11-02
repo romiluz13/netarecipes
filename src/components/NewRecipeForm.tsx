@@ -175,7 +175,7 @@ const NewRecipeForm: React.FC = () => {
               type="text"
               value={recipe.title}
               onChange={(e) => setRecipe({ ...recipe, title: e.target.value })}
-              className="input w-full"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:bg-white focus:border-primary-500 focus:ring-primary-500"
               placeholder="הכנס את שם המתכון"
               required
             />
@@ -331,6 +331,34 @@ const NewRecipeForm: React.FC = () => {
               onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
             />
+          </div>
+
+          <div className="flex gap-4">
+            <label className="block flex-1">
+              <span className="text-gray-700 font-semibold">זמן הכנה (דקות)</span>
+              <input
+                type="number"
+                value={recipe.prepTime}
+                onChange={(e) => setRecipe({ ...recipe, prepTime: Number(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+                min="0"
+                placeholder="לדוגמה: 20 דקות"
+                required
+              />
+            </label>
+            
+            <label className="block flex-1">
+              <span className="text-gray-700 font-semibold">זמן בישול (דקות)</span>
+              <input
+                type="number"
+                value={recipe.cookTime}
+                onChange={(e) => setRecipe({ ...recipe, cookTime: Number(e.target.value) })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 focus:bg-white"
+                min="0"
+                placeholder="לדוגמה: 45 דקות"
+                required
+              />
+            </label>
           </div>
 
           <button
