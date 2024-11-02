@@ -23,7 +23,7 @@ const Footer: React.FC = () => {
           <Heart className="w-4 h-4 text-red-500 fill-current" />
           <span>על ידי</span>
           <a 
-            href="https://github.com/roieiluz" 
+            href="https://github.com/romiluz13" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-primary-600 hover:text-primary-700 font-medium"
