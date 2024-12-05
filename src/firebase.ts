@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCE_P_ry3W9V2aHAFVWo3iK0Np8yEtFdZg",
+  apiKey: "your api key here",
   authDomain: "neta-recipes.firebaseapp.com",
   projectId: "neta-recipes",
   storageBucket: "neta-recipes.appspot.com",
